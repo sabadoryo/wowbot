@@ -1,4 +1,5 @@
 from PIL import Image, ImageGrab
+import mss
 import numpy as np
 import cv2 as cv
 import time 
@@ -24,29 +25,29 @@ class MainAgent:
 
 
 def update_screen(agent):
+    with mss.mss() as sct:
+        fps_report_delay = 5  # Print FPS every 5 seconds
+        fps_report_time = time.time()
+        frame_count = 0  # Count frames
 
-    t0 = time.time()
-    fps_report_delay = 5
-    fps_report_time = time.time()
+        while True:
+            agent.screen_ready_event.clear()  # Mark image as "not ready"
 
-    while True: 
-        agent.screen_ready_event.clear()  # Mark image as "not ready"
+            screenshot = sct.grab(sct.monitors[1])  # Capture primary screen
+            agent.cur_img = np.array(screenshot)
+            agent.cur_img = cv.cvtColor(agent.cur_img, cv.COLOR_BGRA2BGR)
+            agent.cur_imgHSV = cv.cvtColor(agent.cur_img, cv.COLOR_BGR2HSV)
 
-        agent.cur_img = ImageGrab.grab()
-        agent.cur_img= np.array(agent.cur_img)
-        agent.cur_img = cv.cvtColor(agent.cur_img, cv.COLOR_RGB2BGR)
-        agent.cur_imgHSV = cv.cvtColor(agent.cur_img, cv.COLOR_BGR2HSV)
+            agent.screen_ready_event.set()  # Mark image as "ready"
 
-        agent.screen_ready_event.set()  # Mark image as "ready"
-        
-        ex_time = time.time() - t0
+            # FPS Calculation
+            frame_count += 1
+            if time.time() - fps_report_time >= fps_report_delay:
+                fps = frame_count / fps_report_delay
+                print(f"FPS: {fps:.2f}")
+                fps_report_time = time.time()
+                frame_count = 0  # Reset frame count
 
-        if time.time() - fps_report_time >= fps_report_delay:
-            print("FPS: " + str(1 / (ex_time)))
-            fps_report_time = time.time()
-
-
-        t0 = time.time()
 
 def print_menu():
     print("Enter a command:")
